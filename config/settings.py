@@ -35,7 +35,7 @@ COLLECTION_NAME = "kline_patterns"
 WINDOW_SIZE = 20       # 每个形态截取的K线根数（20根4h = 约3.3天）
 STEP_SIZE = 3          # 滑动步长（3根4h = 12小时）
 DEFAULT_INTERVAL = '4h'
-EMBEDDING_DIM = 768    # 向量维度（从3072截断）
+EMBEDDING_DIM = 3072   # 向量维度（完整维度，不截断）
 
 # 交易品种
 SYMBOLS = ["BTCUSDT"]  # Phase 1 只做BTC
