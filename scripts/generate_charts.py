@@ -1,7 +1,7 @@
 """
-从CSV K线数据生成标准化K线图片。
-滑动窗口截取，每张图片20根K线+量能柱，去坐标轴。
-用法: python scripts/generate_charts.py [--symbol BTCUSDT] [--interval 1h]
+从CSV K线数据生成K线图片。
+滑动窗口截取，每张图片20根K线+量能柱，保留坐标轴为Embedding提供语义信息。
+用法: python scripts/generate_charts.py [--symbol BTCUSDT] [--interval 4h]
 """
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -72,12 +72,15 @@ def generate_charts(symbol: str, interval: str, window: int, step: int):
         filename = f"pat_{ts}.png"
         filepath = out_dir / filename
 
-        # 生成图片
+        # 计算窗口内趋势
+        trend_pct = (chunk['close'].iloc[-1] - chunk['close'].iloc[0]) / chunk['close'].iloc[0] * 100
+
+        # 生成图片（保留坐标轴，为多模态Embedding提供语义信息）
         save_config = dict(
             fname=str(filepath),
-            dpi=72,
+            dpi=100,
             bbox_inches='tight',
-            pad_inches=0.05,
+            pad_inches=0.1,
         )
 
         mpf.plot(
@@ -85,8 +88,8 @@ def generate_charts(symbol: str, interval: str, window: int, step: int):
             type='candle',
             volume=True,
             style=style,
-            axisoff=True,
-            figsize=(4, 3),
+            title=f'Pattern pat_{ts} - Trend: {trend_pct:.2f}%',
+            figsize=(5, 4),
             savefig=save_config,
             tight_layout=True,
         )
