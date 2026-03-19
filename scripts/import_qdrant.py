@@ -37,20 +37,23 @@ def import_to_qdrant(symbol: str, interval: str):
     # 连接 Qdrant
     client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
 
+    # 多周期用不同的 collection
+    collection_name = f"{COLLECTION_NAME}_{interval}" if interval != '4h' else COLLECTION_NAME
+
     # 创建/重建 collection
     collections = [c.name for c in client.get_collections().collections]
-    if COLLECTION_NAME in collections:
-        print(f"Collection '{COLLECTION_NAME}' 已存在，将重建...")
-        client.delete_collection(COLLECTION_NAME)
+    if collection_name in collections:
+        print(f"Collection '{collection_name}' 已存在，将重建...")
+        client.delete_collection(collection_name)
 
     client.create_collection(
-        collection_name=COLLECTION_NAME,
+        collection_name=collection_name,
         vectors_config=VectorParams(
             size=EMBEDDING_DIM,
             distance=Distance.COSINE,
         ),
     )
-    print(f"创建 collection: {COLLECTION_NAME} (dim={EMBEDDING_DIM}, cosine)")
+    print(f"创建 collection: {collection_name} (dim={EMBEDDING_DIM}, cosine)")
 
     # 批量导入
     batch_size = 100
@@ -65,32 +68,37 @@ def import_to_qdrant(symbol: str, interval: str):
                 continue
 
             meta = patterns[i]
+            payload = {
+                'timestamp': meta['timestamp'],
+                'datetime': meta['datetime'],
+                'symbol': meta['symbol'],
+                'interval': meta['interval'],
+                'entry_price': meta['entry_price'],
+                'return_5': meta.get('return_5'),
+                'return_10': meta.get('return_10'),
+                'return_20': meta.get('return_20'),
+                'file': meta['file'],
+            }
+            # 市场环境标签（如果已标注）
+            if 'regime' in meta:
+                payload['regime'] = meta['regime']
+
             points.append(PointStruct(
                 id=i,
                 vector=vec,
-                payload={
-                    'timestamp': meta['timestamp'],
-                    'datetime': meta['datetime'],
-                    'symbol': meta['symbol'],
-                    'interval': meta['interval'],
-                    'entry_price': meta['entry_price'],
-                    'return_5': meta.get('return_5'),
-                    'return_10': meta.get('return_10'),
-                    'return_20': meta.get('return_20'),
-                    'file': meta['file'],
-                },
+                payload=payload,
             ))
 
         if points:
-            client.upsert(collection_name=COLLECTION_NAME, points=points)
+            client.upsert(collection_name=collection_name, points=points)
 
         if (end) % 1000 == 0 or end == total:
             print(f"  导入进度: {end}/{total}")
 
     # 验证
-    info = client.get_collection(COLLECTION_NAME)
+    info = client.get_collection(collection_name)
     print(f"\n导入完成!")
-    print(f"Collection: {COLLECTION_NAME}")
+    print(f"Collection: {collection_name}")
     print(f"向量数量: {info.points_count}")
     print(f"向量维度: {EMBEDDING_DIM}")
 
