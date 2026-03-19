@@ -107,8 +107,8 @@ def embed_charts(symbol: str, interval: str):
                 all_vectors.append([0.0] * EMBEDDING_DIM)
                 failed.append(i)
 
-        # 限速控制：免费层60RPM，每秒1个请求保守
-        time.sleep(1.1)
+        # 限速控制：付费层2000RPM，0.05秒/请求
+        time.sleep(0.05)
 
         if (i + 1) % 100 == 0:
             print(f"  进度: {i + 1}/{len(patterns)}")
